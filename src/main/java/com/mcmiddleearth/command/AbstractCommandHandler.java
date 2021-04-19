@@ -1,6 +1,7 @@
 package com.mcmiddleearth.command;
 
 import com.google.common.base.Joiner;
+import com.mcmiddleearth.command.builder.HelpfulLiteralBuilder;
 import com.mcmiddleearth.command.node.HelpfulNode;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
@@ -18,34 +19,39 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import com.mcmiddleearth.command.builder.HelpfulLiteralBuilder;
 
 public abstract class AbstractCommandHandler {
 
-    private final CommandDispatcher<CommandSender> commandDispatcher = new CommandDispatcher<>();
+    private final CommandDispatcher<McmeCommandSender> commandDispatcher = new CommandDispatcher<>();
 
     String command;
 
     public AbstractCommandHandler(String command)
     {
         this.command = command;
-        createCommandTree(commandDispatcher.register(HelpfulLiteralBuilder.literal(command)));
+        commandDispatcher.register(createCommandTree( HelpfulLiteralBuilder.literal(command)));
     }
 
-    protected abstract void createCommandTree(LiteralCommandNode<CommandSender> baseCommandNode);
+    /**
+     * This method is called by the constructor to create a command tree based on the command passed to the constructor
+     * Additional command trees may be added directly to the command dispatcher.
+     * @param baseCommandNodeBuilder the base command node builder
+     * @return same builder as passed in parameter
+     */
+    protected abstract HelpfulLiteralBuilder createCommandTree(HelpfulLiteralBuilder baseCommandNodeBuilder);
 
-    public CommandDispatcher<CommandSender> getCommandDispatcher() { return commandDispatcher; }
+    public CommandDispatcher<McmeCommandSender> getCommandDispatcher() { return commandDispatcher; }
 
-    public void execute(CommandSender sender, String[] args) {
+    public void execute(McmeCommandSender sender, String[] args) {
         execute(sender, command, args);
     }
 
-    public void execute(CommandSender sender, String command, String[] args) {
+    public void execute(McmeCommandSender sender, String command, String[] args) {
         try {
 //CommandNode<CommandSender> node = dispatcher.getRoot();
 //printTree(node);
             String message = String.format("%s %s", command, Joiner.on(' ').join(args)).trim();
-            ParseResults<CommandSender> result = commandDispatcher.parse(message, sender);
+            ParseResults<McmeCommandSender> result = commandDispatcher.parse(message, sender);
 //Logger.getGlobal().info("nodes "+result.getContext().getNodes().size());
 //Logger.getGlobal().info("Parsed");
             result.getExceptions().entrySet().stream()
@@ -66,12 +72,12 @@ public abstract class AbstractCommandHandler {
                     } else {
                         helpMessage = new ComponentBuilder("Invalid command syntax.").color(Style.ERROR);
                     }
-                    CommandNode<CommandSender> parsedNode = result.getContext().getNodes().get(result.getContext().getNodes().size() - 1).getNode();
+                    CommandNode<McmeCommandSender> parsedNode = result.getContext().getNodes().get(result.getContext().getNodes().size() - 1).getNode();
 //Logger.getGlobal().info("Parsed Node:");
 //printTree(parsedNode);
-                    Collection<CommandNode<CommandSender>> children = (result.getContext().getNodes().isEmpty()?new ArrayList<>():parsedNode.getChildren()
+                    Collection<CommandNode<McmeCommandSender>> children = (result.getContext().getNodes().isEmpty()?new ArrayList<>():parsedNode.getChildren()
                             .stream().filter(node -> node.canUse(result.getContext().getSource())).collect(Collectors.toList()));
-                    Map<CommandNode<CommandSender>,String> use = commandDispatcher.getSmartUsage(parsedNode,result.getContext().getSource());
+                    Map<CommandNode<McmeCommandSender>,String> use = commandDispatcher.getSmartUsage(parsedNode,result.getContext().getSource());
                     if (children.isEmpty()) {
                         if (result.getContext().getCommand() == null) {
                             helpMessage.append(" Maybe you don't have permission.");
@@ -82,14 +88,14 @@ public abstract class AbstractCommandHandler {
                         if(!help) {
                             helpMessage.append(" Maybe you want to do:");
                         }
-                        for(Map.Entry<CommandNode<CommandSender>,String> entry: use.entrySet()) {
+                        for(Map.Entry<CommandNode<McmeCommandSender>,String> entry: use.entrySet()) {
                             String usageMessage = "";
                             helpMessage.append("\n").color(Style.INFO);
                             String[] visitedNodes = parsedCommand.split(" ");
-                            Iterator<ParsedCommandNode<CommandSender>> iterator = result.getContext().getNodes().listIterator();
+                            Iterator<ParsedCommandNode<McmeCommandSender>> iterator = result.getContext().getNodes().listIterator();
                             for (String visitedNode : visitedNodes) {
                                 helpMessage.append(" "+visitedNode);
-                                ParsedCommandNode<CommandSender> node = iterator.next();
+                                ParsedCommandNode<McmeCommandSender> node = iterator.next();
 //Logger.getGlobal().info("Visited Node:");
 //printTree(node.getNode());
                                 helpMessage.color((node.getNode() instanceof LiteralCommandNode?Style.LITERAL:Style.ARGUMENT));
@@ -105,12 +111,12 @@ public abstract class AbstractCommandHandler {
                                 }
                             }
                             String[] possibleNodes = entry.getValue().replace('|', ' ').split(" ");
-                            CommandNode<CommandSender> node = parsedNode;
-                            CommandNode<CommandSender> lastNode = parsedNode;
+                            CommandNode<McmeCommandSender> node = parsedNode;
+                            CommandNode<McmeCommandSender> lastNode = parsedNode;
                             for(String possibleNode: possibleNodes) {
 //Logger.getLogger(ModerationPluginCommand.class.getSimpleName()).info("possible node "+possibleNode);
                                 helpMessage.append(" "+possibleNode);
-                                CommandNode<CommandSender> temp = node;
+                                CommandNode<McmeCommandSender> temp = node;
                                 node = findDirectChild(node, possibleNode.replaceAll("[()\\[\\]<>]",""));
                                 if(node==null) {
                                     node = findDirectChild(lastNode, possibleNode.replaceAll("[()\\[\\]<>]",""));
@@ -151,12 +157,14 @@ public abstract class AbstractCommandHandler {
         }
     }
 
-    public void onTabComplete(WrappedTabCompleteEvent event) {
+    public void onTabComplete(TabCompleteRequest event) {
         try {
-            ParseResults<CommandSender> result = commandDispatcher.parse(event.getCursor().substring(1), event.getSender());
+//Logger.getGlobal().info("onTabComplete cursor: "+event.getCursor().substring(1));
+            ParseResults<McmeCommandSender> result = commandDispatcher.parse(event.getCursor().substring(1), event.getSender());
             if(result.getContext().getNodes().isEmpty()) {
                 return;
             }
+//Logger.getGlobal().info("onTabComplete nodes found");
             List<Suggestion> completionSuggestions
                     = commandDispatcher.getCompletionSuggestions(result).get().getList();
             if(completionSuggestions.isEmpty()) {
@@ -164,17 +172,18 @@ public abstract class AbstractCommandHandler {
             } else {
                 event.getSuggestions().addAll(completionSuggestions.stream().map(Suggestion::getText).collect(Collectors.toList()));
             }
+//Logger.getGlobal().info("onTabComplete cancelled: "+event.isCancelled());
         } catch (InterruptedException | ExecutionException e) {
             event.getSender().sendMessage(new ComponentBuilder("Command tab complete error."+e).color(Style.ERROR).create());
         }
     }
 
-    private CommandNode<CommandSender> findDirectChild(CommandNode<CommandSender> root, String name) {
+    private CommandNode<McmeCommandSender> findDirectChild(CommandNode<McmeCommandSender> root, String name) {
 //Logger.getLogger(ModerationPluginCommand.class.getSimpleName()).info("find node "+name);
         //if(root.getName().equals(name)) {
         //    return root;
         //} else {
-            for(CommandNode<CommandSender> node: root.getChildren()) {
+            for(CommandNode<McmeCommandSender> node: root.getChildren()) {
                 //CommandNode<CommandSender> found = findNode(node,name);
                 if(node.getName().equals(name)) {//found != null) {
                     return node;//found;
@@ -184,12 +193,12 @@ public abstract class AbstractCommandHandler {
         return null;
     }
 
-    private void printTree(CommandNode<CommandSender> node) {
+    private void printTree(CommandNode<McmeCommandSender> node) {
         Logger log = Logger.getLogger(this.getClass().getSimpleName());
         log.info(printNode(node, "", "  "));
     }
 
-    private String printNode(CommandNode<CommandSender> node, String message, String indentation) {
+    private String printNode(CommandNode<McmeCommandSender> node, String message, String indentation) {
         message = message + indentation+node.getClass().getSimpleName()+" "+node.getName()
                 +"\n"+indentation+"-use: "+node.getUsageText();
         if(node instanceof HelpfulNode) {
@@ -197,7 +206,7 @@ public abstract class AbstractCommandHandler {
                     +"\n"+indentation+"-help: "+((HelpfulNode)node).getHelpText()
                     +"\n"+indentation+"-tool: "+((HelpfulNode)node).getTooltip();
         }
-        for(CommandNode<CommandSender> child: node.getChildren()) {
+        for(CommandNode<McmeCommandSender> child: node.getChildren()) {
             message = printNode(child,message+"\n",indentation+"    ");
         }
         return message;

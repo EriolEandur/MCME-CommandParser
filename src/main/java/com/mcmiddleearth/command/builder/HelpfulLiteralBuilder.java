@@ -1,11 +1,11 @@
 package com.mcmiddleearth.command.builder;
 
-import com.mcmiddleearth.command.CommandSender;
+import com.mcmiddleearth.command.McmeCommandSender;
 import com.mcmiddleearth.command.node.HelpfulLiteralNode;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.CommandNode;
 
-public class HelpfulLiteralBuilder extends LiteralArgumentBuilder<CommandSender> {
+public class HelpfulLiteralBuilder extends LiteralArgumentBuilder<McmeCommandSender> {
 
     private String helpText;
     private String tooltip;
@@ -57,7 +57,7 @@ public class HelpfulLiteralBuilder extends LiteralArgumentBuilder<CommandSender>
         final HelpfulLiteralNode result = new HelpfulLiteralNode(getLiteral(), getCommand(), getRequirement(), getRedirect(), getRedirectModifier(),
                                                    isFork(), helpText, tooltip);
 
-        for (final CommandNode<CommandSender> argument : getArguments()) {
+        for (final CommandNode<McmeCommandSender> argument : getArguments()) {
             result.addChild(argument);
         }
 

@@ -1,6 +1,6 @@
 package com.mcmiddleearth.command.builder;
 
-import com.mcmiddleearth.command.CommandSender;
+import com.mcmiddleearth.command.McmeCommandSender;
 import com.mcmiddleearth.command.argument.HelpfulArgumentType;
 import com.mcmiddleearth.command.node.HelpfulArgumentNode;
 import com.mojang.brigadier.arguments.ArgumentType;
@@ -9,12 +9,12 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
 
-public class HelpfulRequiredArgumentBuilder<T> extends ArgumentBuilder<CommandSender, HelpfulRequiredArgumentBuilder<T>> {
+public class HelpfulRequiredArgumentBuilder<T> extends ArgumentBuilder<McmeCommandSender, HelpfulRequiredArgumentBuilder<T>> {
     private String helpText;
     private String tooltip;
     private final String name;
     private final ArgumentType<T> type;
-    private SuggestionProvider<CommandSender> suggestionsProvider = null;
+    private SuggestionProvider<McmeCommandSender> suggestionsProvider = null;
 
     private HelpfulRequiredArgumentBuilder(final String name, final ArgumentType<T> type) {
         this.name = name;
@@ -35,7 +35,7 @@ public class HelpfulRequiredArgumentBuilder<T> extends ArgumentBuilder<CommandSe
         return new HelpfulRequiredArgumentBuilder<>(name, type);
     }
 
-    public HelpfulRequiredArgumentBuilder<T> suggests(final SuggestionProvider<CommandSender> provider) {
+    public HelpfulRequiredArgumentBuilder<T> suggests(final SuggestionProvider<McmeCommandSender> provider) {
         this.suggestionsProvider = provider;
         return getThis();
     }
@@ -65,7 +65,7 @@ public class HelpfulRequiredArgumentBuilder<T> extends ArgumentBuilder<CommandSe
         return getThis();
     }
 
-    public SuggestionProvider<CommandSender> getSuggestionsProvider() {
+    public SuggestionProvider<McmeCommandSender> getSuggestionsProvider() {
         return suggestionsProvider;
     }
 
@@ -82,12 +82,12 @@ public class HelpfulRequiredArgumentBuilder<T> extends ArgumentBuilder<CommandSe
         return name;
     }
 
-    public ArgumentCommandNode<CommandSender, T> build() {
-        final ArgumentCommandNode<CommandSender, T> result = new HelpfulArgumentNode<>(getName(), getType(), getCommand(),
+    public ArgumentCommandNode<McmeCommandSender, T> build() {
+        final ArgumentCommandNode<McmeCommandSender, T> result = new HelpfulArgumentNode<>(getName(), getType(), getCommand(),
                                                                     getRequirement(), getRedirect(), getRedirectModifier(),
                                                                     isFork(), getSuggestionsProvider(), helpText, tooltip);
 
-        for (final CommandNode<CommandSender> argument : getArguments()) {
+        for (final CommandNode<McmeCommandSender> argument : getArguments()) {
             result.addChild(argument);
         }
 

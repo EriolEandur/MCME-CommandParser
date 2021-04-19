@@ -2,13 +2,13 @@ package com.mcmiddleearth.command;
 
 import java.util.List;
 
-public interface WrappedTabCompleteEvent {
+public interface TabCompleteRequest {
 
     public void setCancelled(boolean cancelled);
 
     public boolean isCancelled();
 
-    public CommandSender getSender();
+    public McmeCommandSender getSender();
 
     public List<String> getSuggestions();
 
